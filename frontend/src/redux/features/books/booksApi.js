@@ -3,13 +3,7 @@ import getBaseUrl from '../../../utils/baseURL'
 
 const  baseQuery = fetchBaseQuery({
     baseUrl: `${getBaseUrl()}/api/books`,
-    prepareHeaders: (Headers) => {
-        const token =  localStorage.getItem('token');
-        if(token) {
-            Headers.set('Authorization', `Bearer ${token}`);
-        }
-        return Headers;
-    }
+    credentials: "include",
 })
 
 const booksApi = createApi({
@@ -31,6 +25,14 @@ const booksApi = createApi({
         fetchBookById: builder.query({
             query: (id) => `/${id}`,
             providesTags: (result, error, id) => [{ type: "Books", id }],
+        }),
+        updateTrendingStatus: builder.mutation({
+            query: ({ id, trending }) => ({
+                url: `/trending/${id}`,
+                method: "PATCH",
+                body: { trending },
+            }),
+            invalidatesTags: ["Books"],
         }),
         addBook: builder.mutation({
             query: (newBook) => ({
@@ -83,6 +85,7 @@ export const {
     useFetchAllBooksQuery,
     useFetchSellerBooksQuery,
     useFetchBookByIdQuery,
+    useUpdateTrendingStatusMutation,
     useAddBookMutation,
     useUpdateBookMutation,
     useDeleteBookMutation

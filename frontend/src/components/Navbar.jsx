@@ -34,7 +34,7 @@ const Navbar = () => {
               Dashboard
             </NavLink>
             <NavLink to="/orders" className="hover:text-slate-900">
-              Orders
+              My Library
             </NavLink>
           </div>
         </div>
@@ -83,7 +83,7 @@ const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                   >
-                    My Orders
+                    My Library
                   </Link>
                   <button
                     type="button"

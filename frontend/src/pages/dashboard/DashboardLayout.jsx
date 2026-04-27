@@ -20,12 +20,14 @@ const DashboardLayout = () => {
     <section className="grid gap-6 lg:grid-cols-[260px_1fr]">
       <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
         <Link to="/" className="block rounded-2xl bg-slate-900 px-5 py-4 text-white">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
             {isAdmin ? "Admin" : "Seller"}
           </p>
           <h1 className="mt-2 text-2xl font-bold">{currentUser?.username}</h1>
           <p className="mt-2 text-sm text-slate-300">
-            {isAdmin ? "Manage the full catalog and store health." : "Upload and manage your own books."}
+            {isAdmin
+              ? "Oversee inventory, rentals, and member standing."
+              : "Manage the books attached to your account."}
           </p>
         </Link>
 
@@ -61,12 +63,12 @@ const DashboardLayout = () => {
           <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-3xl font-bold text-slate-900">
-                {isAdmin ? "Admin command center" : "Seller workspace"}
+                {isAdmin ? "Management console" : "Seller workspace"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 {isAdmin
-                  ? "Admin can add or delete any book in the catalog."
-                  : "You can add books and manage the listings attached to your account."}
+                  ? "A steady view of inventory, rental activity, and member standing."
+                  : "Add books, review your listings, and keep the library shelf in order."}
               </p>
             </div>
             <div className="flex gap-3">
@@ -74,13 +76,13 @@ const DashboardLayout = () => {
                 to="/dashboard/add-new-book"
                 className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                Add a Book
+                Add a book
               </Link>
               <Link
                 to="/dashboard/manage-books"
                 className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Manage Listings
+                View inventory
               </Link>
             </div>
           </div>

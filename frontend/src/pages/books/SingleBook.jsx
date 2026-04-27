@@ -1,9 +1,13 @@
 import { FiShoppingCart } from "react-icons/fi";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getImgUrl } from "../../utils/getImgUrl";
 import { addToCart } from "../../redux/features/cart/cartSlice";
 import { useFetchBookByIdQuery } from "../../redux/features/books/booksApi";
+import { useBookAccess } from "../../hooks/useBookAccess";
+import { useAuth } from "../../context/AuthContext";
+import { hydrateBookStatuses } from "../../redux/features/books/bookSlice";
 
 const getDocumentLabel = (mimeType) => {
   if (mimeType === "application/pdf") {
@@ -25,6 +29,22 @@ const SingleBook = () => {
   const { id } = useParams();
   const { data: book, isLoading, isError } = useFetchBookByIdQuery(id);
   const dispatch = useDispatch();
+  const { handleBookAccess } = useBookAccess();
+  const { currentUser } = useAuth();
+  const bookStatus = useSelector((state) => state.bookState.statusesById[id]);
+
+  useEffect(() => {
+    if (!book) {
+      return;
+    }
+
+    dispatch(
+      hydrateBookStatuses({
+        books: [book],
+        currentUserId: currentUser?.id,
+      })
+    );
+  }, [book, currentUser?.id, dispatch]);
 
   const handleAddToCart = (product) => {
     dispatch(addToCart(product));
@@ -56,23 +76,37 @@ const SingleBook = () => {
             <strong>Published:</strong> {new Date(book?.createdAt).toLocaleDateString()}
           </p>
           <p>
-            <strong>Price:</strong> ${book.newPrice}
-            <span className="ml-2 text-slate-400 line-through">${book.oldPrice}</span>
+            <strong>5-Day Rental:</strong> {book.isFree ? "Free" : `INR ${book.newPrice}`}
+            {!book.isFree ? (
+              <span className="ml-2 text-slate-400 line-through">INR {book.oldPrice}</span>
+            ) : null}
+          </p>
+          <p>
+            <strong>Copies Available:</strong> {book.availableCopies ?? book.stock}
           </p>
           <p>
             <strong>Description:</strong> {book.description}
           </p>
           <p>
-            <strong>Purchased file:</strong> {book.documentName} ({getDocumentLabel(book.documentMimeType)})
+            <strong>Included file:</strong> {book.documentName} ({getDocumentLabel(book.documentMimeType)})
           </p>
         </div>
 
         <button
-          onClick={() => handleAddToCart(book)}
-          className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 font-semibold text-white transition hover:bg-slate-800"
+          onClick={() => handleBookAccess({ book, onRent: () => handleAddToCart(book) })}
+          disabled={bookStatus === "owned" || bookStatus === "unavailable"}
+          className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <FiShoppingCart />
-          <span>Add to Cart</span>
+          <span>
+            {bookStatus === "owned"
+              ? "Your Listing"
+              : bookStatus === "unavailable"
+                ? "No Copy Available"
+                : book.isFree
+                  ? "Read Free"
+                  : "Add to Rental Cart"}
+          </span>
         </button>
       </div>
     </div>

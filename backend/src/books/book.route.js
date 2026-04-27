@@ -6,9 +6,11 @@ const {
   getMyBooks,
   getSingleBook,
   postABook,
+  setTrendingStatus,
   updateBook,
 } = require("./book.controller");
 const verifyToken = require("../middleware/verifyToken");
+const verifyAdmin = require("../middleware/verifyAdmin");
 const { uploadBookDocument } = require("./book.upload");
 
 const router = express.Router();
@@ -16,6 +18,7 @@ const documentUpload = uploadBookDocument.single("document");
 
 router.get("/", getAllBooks);
 router.get("/mine", verifyToken, getMyBooks);
+router.patch("/trending/:id", verifyAdmin, setTrendingStatus);
 router.get("/:id/document", verifyToken, getBookDocument);
 router.get("/:id", getSingleBook);
 router.post("/create-book", verifyToken, documentUpload, postABook);

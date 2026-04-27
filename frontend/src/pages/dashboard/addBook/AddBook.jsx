@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 import { useAddBookMutation } from "../../../redux/features/books/booksApi";
+import { useAuth } from "../../../context/AuthContext";
 
 const categoryOptions = [
   "action",
@@ -17,12 +18,15 @@ const categoryOptions = [
 ];
 
 const AddBook = () => {
+  const { isAdmin } = useAuth();
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
       title: "",
       author: "",
       description: "",
       category: "action",
+      stock: 1,
+      isFree: false,
       oldPrice: 0,
       newPrice: 0,
       coverImage: "",
@@ -37,8 +41,10 @@ const AddBook = () => {
     try {
       await addBook({
         ...data,
+        stock: Number(data.stock),
+        isFree: Boolean(data.isFree),
         oldPrice: Number(data.oldPrice),
-        newPrice: Number(data.newPrice),
+        newPrice: data.isFree ? 0 : Number(data.newPrice),
         document: data.document?.[0],
       }).unwrap();
 
@@ -61,7 +67,7 @@ const AddBook = () => {
     <div className="max-w-3xl rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-2xl font-bold text-slate-900">Add a new book</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Every signed-in user can list books here. Admin can manage all listings afterward.
+        Every signed-in user can list books here for the e-library. Admin can manage all listings afterward.
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 grid gap-5 md:grid-cols-2">
@@ -127,7 +133,7 @@ const AddBook = () => {
             className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:font-semibold file:text-white focus:border-emerald-500"
           />
           <p className="mt-2 text-xs text-slate-500">
-            Upload the purchased file in PDF, TXT, DOC, or DOCX format. Max size: 10MB.
+            Upload the readable file in PDF, TXT, DOC, or DOCX format. Max size: 10MB.
           </p>
           {selectedFile ? (
             <p className="mt-2 text-sm font-medium text-slate-700">
@@ -137,7 +143,17 @@ const AddBook = () => {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Old Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Copies In Stock</label>
+          <input
+            type="number"
+            min="1"
+            {...register("stock", { required: true, min: 1 })}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Old Rental Fee</label>
           <input
             type="number"
             step="0.01"
@@ -147,26 +163,38 @@ const AddBook = () => {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">New Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            5-Day Rental Fee
+          </label>
           <input
             type="number"
             step="0.01"
             {...register("newPrice", { required: true })}
             className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-500"
+            disabled={watch("isFree")}
           />
         </div>
 
         <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
-          <input type="checkbox" {...register("trending")} />
-          <span className="text-sm font-semibold text-slate-700">Mark this book as trending</span>
+          <input type="checkbox" {...register("isFree")} />
+          <span className="text-sm font-semibold text-slate-700">
+            Offer this title for free library access
+          </span>
         </label>
+
+        {isAdmin ? (
+          <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
+            <input type="checkbox" {...register("trending")} />
+            <span className="text-sm font-semibold text-slate-700">Mark this book as trending</span>
+          </label>
+        ) : null}
 
         <button
           type="submit"
           disabled={isLoading}
           className="rounded-2xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 md:col-span-2"
         >
-          {isLoading ? "Saving..." : "Add Book"}
+          {isLoading ? "Saving..." : "Add Library Book"}
         </button>
       </form>
     </div>

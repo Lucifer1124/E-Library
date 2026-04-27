@@ -26,6 +26,45 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    accountStatus: {
+      type: String,
+      enum: ["Active", "Blocked"],
+      default: "Active",
+    },
+    pendingFines: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    rentedBooks: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Book",
+      },
+    ],
+    activeRentals: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+      },
+    ],
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    manualBlock: {
+      type: Boolean,
+      default: false,
+    },
+    blockReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    blockedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

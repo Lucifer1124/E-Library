@@ -32,6 +32,22 @@ const bookSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    isFree: {
+      type: Boolean,
+      default: false,
+    },
+    stock: {
+      type: Number,
+      required: true,
+      default: 1,
+      min: 1,
+    },
+    currentPossessors: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     oldPrice: {
       type: Number,
       required: true,

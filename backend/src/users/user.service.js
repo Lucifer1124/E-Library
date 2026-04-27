@@ -5,6 +5,7 @@ const ADMIN_CREDENTIALS = {
   username: "ADMIN",
   password: "admin@12345",
 };
+const SESSION_COOKIE_NAME = "bookie_session";
 
 const getJwtSecret = () => process.env.JWT_SECRET_KEY;
 
@@ -12,6 +13,10 @@ const sanitizeUser = (user) => ({
   id: user._id,
   username: user.username,
   role: user.role,
+  accountStatus: user.accountStatus,
+  pendingFines: user.pendingFines || 0,
+  isBlocked: Boolean(user.isBlocked),
+  blockReason: user.blockReason || "",
   createdAt: user.createdAt,
 });
 
@@ -27,6 +32,19 @@ const createSessionToken = (user) =>
       expiresIn: "5d",
     }
   );
+
+const getSessionCookieOptions = () => ({
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 5 * 24 * 60 * 60 * 1000,
+});
+
+const getSessionCookieClearOptions = () => ({
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+});
 
 const cleanupLegacyUserIndexes = async () => {
   const collection = User.collection;
@@ -63,5 +81,8 @@ module.exports = {
   cleanupLegacyUserIndexes,
   createSessionToken,
   ensureAdminUser,
+  getSessionCookieClearOptions,
+  getSessionCookieOptions,
+  SESSION_COOKIE_NAME,
   sanitizeUser,
 };

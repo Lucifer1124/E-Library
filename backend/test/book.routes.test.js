@@ -142,5 +142,25 @@ test("blocks document access when the user has not purchased the book", async ()
     .set("Authorization", `Bearer ${token}`);
 
   assert.equal(response.status, 403);
-  assert.equal(response.body.message, "Buy this book to access its document.");
+  assert.equal(response.body.message, "Rent this book to access its document.");
+});
+
+test("rejects non-admin attempts to update trending state", async () => {
+  const app = createApp();
+  const user = {
+    _id: new mongoose.Types.ObjectId(),
+    username: "reader3",
+    role: "user",
+  };
+  const token = createSessionToken(user);
+
+  User.findById = async () => user;
+
+  const response = await request(app)
+    .patch(`/api/books/trending/${new mongoose.Types.ObjectId()}`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({ trending: true });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.message, "Forbidden. Admin access only.");
 });

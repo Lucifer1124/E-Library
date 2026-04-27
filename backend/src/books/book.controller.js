@@ -15,6 +15,13 @@ const sanitizeBookPayload = (payload = {}) => ({
     payload.trending === 1 ||
     payload.trending === "1",
   coverImage: payload.coverImage?.trim(),
+  isFree:
+    payload.isFree === true ||
+    payload.isFree === "true" ||
+    payload.isFree === "on" ||
+    payload.isFree === 1 ||
+    payload.isFree === "1",
+  stock: Number(payload.stock || 1),
   oldPrice: Number(payload.oldPrice || 0),
   newPrice: Number(payload.newPrice || 0),
 });
@@ -60,8 +67,16 @@ const validateBookPayload = (payload, file, existingBook) => {
     return "Book pricing must be valid numbers.";
   }
 
-  if (payload.oldPrice < 0 || payload.newPrice < 0) {
+  if (payload.oldPrice < 0 || payload.newPrice < 0 || Number.isNaN(payload.stock)) {
     return "Book prices cannot be negative.";
+  }
+
+  if (payload.stock < 1) {
+    return "Stock must be at least 1 copy.";
+  }
+
+  if (!payload.isFree && payload.newPrice <= 0) {
+    return "Paid rentals must have a rental price greater than zero.";
   }
 
   if (!file && !existingBook?.documentStorageName) {
@@ -75,19 +90,70 @@ const canManageBook = (book, user) =>
   user.role === "admin" || book.sellerId.toString() === user._id.toString();
 
 const userCanAccessDocument = async (book, user) => {
+  if (book.isFree) {
+    return true;
+  }
+
   if (canManageBook(book, user)) {
     return true;
   }
 
   return Order.exists({
     userId: user._id,
-    "items.bookId": book._id,
+    items: {
+      $elemMatch: {
+        bookId: book._id,
+        returnedDate: null,
+        dueDate: { $gte: new Date() },
+      },
+    },
+  });
+};
+
+const attachAvailability = async (books) => {
+  if (!books.length) {
+    return books;
+  }
+
+  const bookIds = books.map((book) => book._id);
+  const activeRentals = await Order.aggregate([
+    { $unwind: "$items" },
+    {
+      $match: {
+        "items.bookId": { $in: bookIds },
+        "items.returnedDate": null,
+      },
+    },
+    {
+      $group: {
+        _id: "$items.bookId",
+        activeCopies: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const activeMap = new Map(
+    activeRentals.map((item) => [item._id.toString(), item.activeCopies])
+  );
+
+  return books.map((book) => {
+    const activeCopies = Math.max(
+      activeMap.get(book._id.toString()) || 0,
+      Array.isArray(book.currentPossessors) ? book.currentPossessors.length : 0
+    );
+
+    return {
+      ...book,
+      activeCopies,
+      availableCopies: Math.max(book.stock || 0, 0),
+    };
   });
 };
 
 const postABook = async (req, res) => {
   try {
     const payload = sanitizeBookPayload(req.body);
+    payload.trending = req.user.role === "admin" ? payload.trending : false;
     const validationError = validateBookPayload(payload, req.file);
 
     if (validationError) {
@@ -136,7 +202,7 @@ const getAllBooks = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.status(200).json(books.map(toPublicBook));
+    return res.status(200).json(await attachAvailability(books.map(toPublicBook)));
   } catch (error) {
     console.error("Error fetching books", error);
     return res.status(500).json({ message: "Failed to fetch books." });
@@ -151,7 +217,7 @@ const getMyBooks = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.status(200).json(books.map(toPublicBook));
+    return res.status(200).json(await attachAvailability(books.map(toPublicBook)));
   } catch (error) {
     console.error("Error fetching seller books", error);
     return res.status(500).json({ message: "Failed to fetch your books." });
@@ -167,7 +233,8 @@ const getSingleBook = async (req, res) => {
       return res.status(404).json({ message: "Book not found." });
     }
 
-    return res.status(200).json(toPublicBook(book));
+    const [bookWithAvailability] = await attachAvailability([toPublicBook(book)]);
+    return res.status(200).json(bookWithAvailability);
   } catch (error) {
     console.error("Error fetching book", error);
     return res.status(500).json({ message: "Failed to fetch book." });
@@ -190,6 +257,7 @@ const updateBook = async (req, res) => {
     }
 
     const payload = sanitizeBookPayload(req.body);
+    payload.trending = req.user.role === "admin" ? payload.trending : book.trending;
     const validationError = validateBookPayload(payload, req.file, book);
 
     if (validationError) {
@@ -265,7 +333,7 @@ const getBookDocument = async (req, res) => {
     const canAccess = await userCanAccessDocument(book, req.user);
 
     if (!canAccess) {
-      return res.status(403).json({ message: "Buy this book to access its document." });
+      return res.status(403).json({ message: "Rent this book to access its document." });
     }
 
     const inlineMimeTypes = new Set(["application/pdf", "text/plain"]);
@@ -283,6 +351,27 @@ const getBookDocument = async (req, res) => {
   }
 };
 
+const setTrendingStatus = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({ message: "Book not found." });
+    }
+
+    book.trending = req.body?.trending === true || req.body?.trending === "true";
+    await book.save();
+
+    return res.status(200).json({
+      message: "Trending status updated.",
+      book: toPublicBook(book),
+    });
+  } catch (error) {
+    console.error("Error updating trending state", error);
+    return res.status(500).json({ message: "Unable to update trending state." });
+  }
+};
+
 module.exports = {
   deleteABook,
   getAllBooks,
@@ -290,5 +379,6 @@ module.exports = {
   getMyBooks,
   getSingleBook,
   postABook,
+  setTrendingStatus,
   updateBook,
 };

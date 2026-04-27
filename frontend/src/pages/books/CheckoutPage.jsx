@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import Swal from "sweetalert2";
@@ -7,19 +7,37 @@ import { clearCart } from "../../redux/features/cart/cartSlice";
 import { useCreateOrderMutation } from "../../redux/features/orders/ordersApi";
 import { useAuth } from "../../context/AuthContext";
 
+const DEFAULT_RENTAL_DAYS = 5;
+const RENEWAL_RATE = 2;
+
 const CheckoutPage = () => {
   const cartItems = useSelector((state) => state.cart.cartItems);
-  const totalPrice = cartItems.reduce((acc, item) => acc + item.newPrice, 0).toFixed(2);
   const { currentUser } = useAuth();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [renewalDays, setRenewalDays] = useState(0);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
+
+  const priceSummary = useMemo(() => {
+    const baseRental = cartItems.reduce(
+      (acc, item) => acc + (item.isFree ? 0 : Number(item.newPrice || 0)),
+      0
+    );
+    const renewalTotal = cartItems.length * renewalDays * RENEWAL_RATE;
+
+    return {
+      baseRental,
+      renewalTotal,
+      total: baseRental + renewalTotal,
+      totalDays: DEFAULT_RENTAL_DAYS + renewalDays,
+    };
+  }, [cartItems, renewalDays]);
 
   const onSubmit = async (data) => {
     if (cartItems.length === 0) {
@@ -38,6 +56,7 @@ const CheckoutPage = () => {
       },
       productIds: cartItems.map((item) => item._id),
       paymentMethod,
+      renewalDays,
       demoCard:
         paymentMethod === "demo-card"
           ? {
@@ -52,16 +71,16 @@ const CheckoutPage = () => {
       await createOrder(newOrder).unwrap();
       dispatch(clearCart());
       await Swal.fire({
-        title: "Order placed",
-        text: "Your order was created successfully.",
+        title: "Rental added",
+        text: `We've tucked that book into your library for ${priceSummary.totalDays} day(s).`,
         icon: "success",
-        confirmButtonText: "Open My Orders",
+        confirmButtonText: "Open library",
       });
       navigate("/orders");
     } catch (error) {
       Swal.fire({
-        title: "Checkout failed",
-        text: error?.data?.message || "Unable to place your order.",
+        title: "Rental not completed",
+        text: error?.data?.message || "We couldn't process this rental - missing item details.",
         icon: "error",
       });
     }
@@ -70,8 +89,8 @@ const CheckoutPage = () => {
   if (cartItems.length === 0) {
     return (
       <div className="rounded-[2rem] border border-slate-200 bg-white p-10 text-center shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Your cart is empty</h1>
-        <p className="mt-3 text-slate-600">Add a few books before checking out.</p>
+        <h1 className="text-3xl font-bold text-slate-900">Your rental cart is empty</h1>
+        <p className="mt-3 text-slate-600">Add a few library books before checking out.</p>
       </div>
     );
   }
@@ -81,16 +100,21 @@ const CheckoutPage = () => {
       <div className="mb-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Checkout
+            Rental Checkout
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Complete your order</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Issue your library books</h1>
           <p className="mt-2 text-sm text-slate-600">
             Logged in as <strong>{currentUser?.username}</strong>
           </p>
+          {currentUser?.isBlocked ? (
+            <p className="mt-2 text-sm font-semibold text-rose-600">
+              This account is blocked from new rentals.
+            </p>
+          ) : null}
         </div>
         <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Total</p>
-          <p className="mt-1 text-2xl font-bold">${totalPrice}</p>
+          <p className="mt-1 text-2xl font-bold">INR {priceSummary.total.toFixed(2)}</p>
         </div>
       </div>
 
@@ -167,10 +191,32 @@ const CheckoutPage = () => {
 
         <div className="space-y-5 rounded-[1.75rem] bg-slate-50 p-6">
           <div>
+            <h2 className="text-xl font-bold text-slate-900">Rental plan</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Every rental starts with 5 days. You can pre-add extra days for INR 2 per book per day.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Extra Renewal Days
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={renewalDays}
+              onChange={(event) => setRenewalDays(Math.max(Number(event.target.value) || 0, 0))}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-amber-500"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Total access period: {priceSummary.totalDays} days.
+            </p>
+          </div>
+
+          <div>
             <h2 className="text-xl font-bold text-slate-900">Payment method</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Razorpay is intentionally not active yet. Choose one of the supported local demo
-              options.
+              The local demo flow stays active here while Razorpay remains reserved for later.
             </p>
           </div>
 
@@ -182,9 +228,9 @@ const CheckoutPage = () => {
                 onChange={() => setPaymentMethod("cash")}
               />
               <span>
-                <span className="block font-semibold text-slate-900">Cash on Delivery</span>
+                <span className="block font-semibold text-slate-900">Cash / manual settlement</span>
                 <span className="block text-sm text-slate-600">
-                  Order stays pending until it is delivered.
+                  Useful for local-library handling by admin.
                 </span>
               </span>
             </label>
@@ -240,23 +286,35 @@ const CheckoutPage = () => {
           ) : null}
 
           <div className="rounded-2xl bg-white p-4">
-            <h3 className="font-semibold text-slate-900">Order summary</h3>
+            <h3 className="font-semibold text-slate-900">Rental summary</h3>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               {cartItems.map((item) => (
                 <div key={item._id} className="flex items-center justify-between gap-4">
                   <span>{item.title}</span>
-                  <span className="font-semibold text-slate-900">${item.newPrice}</span>
+                  <span className="font-semibold text-slate-900">
+                    {item.isFree ? "Free" : `INR ${item.newPrice}`}
+                  </span>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Base rental</span>
+                <span className="font-semibold text-slate-900">INR {priceSummary.baseRental.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Pre-selected renewal</span>
+                <span className="font-semibold text-slate-900">INR {priceSummary.renewalTotal.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || currentUser?.isBlocked}
             className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isLoading ? "Placing order..." : "Place Order"}
+            {isLoading ? "Creating rental..." : "Confirm Rental"}
           </button>
         </div>
       </form>

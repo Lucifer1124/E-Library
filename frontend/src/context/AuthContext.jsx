@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import apiClient from "../utils/apiClient";
 import {
   clearSession,
-  getStoredToken,
   getStoredUser,
   persistSession,
 } from "./authStorage";
@@ -25,30 +24,20 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvide = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(getStoredUser());
-  const [token, setToken] = useState(getStoredToken());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const bootstrapAuth = async () => {
-      const existingToken = getStoredToken();
-
-      if (!existingToken) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const data = await authRequest({
           url: "/api/auth/me",
           method: "GET",
         });
         setCurrentUser(data.user);
-        setToken(existingToken);
-        persistSession(existingToken, data.user);
+        persistSession(data.user);
       } catch {
         clearSession();
         setCurrentUser(null);
-        setToken(null);
       } finally {
         setLoading(false);
       }
@@ -64,9 +53,8 @@ export const AuthProvide = ({ children }) => {
       data: { username, password },
     });
 
-    persistSession(data.token, data.user);
+    persistSession(data.user);
     setCurrentUser(data.user);
-    setToken(data.token);
 
     return data.user;
   };
@@ -78,42 +66,37 @@ export const AuthProvide = ({ children }) => {
       data: { username, password },
     });
 
-    persistSession(data.token, data.user);
+    persistSession(data.user);
     setCurrentUser(data.user);
-    setToken(data.token);
 
     return data.user;
   };
 
   const logout = async () => {
     try {
-      if (getStoredToken()) {
-        await authRequest({
-          url: "/api/auth/logout",
-          method: "POST",
-        });
-      }
+      await authRequest({
+        url: "/api/auth/logout",
+        method: "POST",
+      });
     } catch {
       // Local cleanup is enough even if the logout request fails.
     } finally {
       clearSession();
       setCurrentUser(null);
-      setToken(null);
     }
   };
 
   const value = useMemo(
     () => ({
       currentUser,
-      token,
       loading,
-      isAuthenticated: Boolean(currentUser && token),
+      isAuthenticated: Boolean(currentUser),
       isAdmin: currentUser?.role === "admin",
       registerUser,
       loginUser,
       logout,
     }),
-    [currentUser, loading, token]
+    [currentUser, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

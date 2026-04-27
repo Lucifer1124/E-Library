@@ -1,8 +1,9 @@
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getImgUrl } from "../../utils/getImgUrl";
 import { addToCart } from "../../redux/features/cart/cartSlice";
+import { useBookAccess } from "../../hooks/useBookAccess";
 
 const getDocumentLabel = (mimeType) => {
   if (!mimeType) {
@@ -26,6 +27,10 @@ const getDocumentLabel = (mimeType) => {
 
 const BookCard = ({ book }) => {
   const dispatch = useDispatch();
+  const { handleBookAccess } = useBookAccess();
+  const bookStatus = useSelector((state) => state.bookState.statusesById[book?._id]);
+  const isOwned = bookStatus === "owned";
+  const isUnavailable = bookStatus === "unavailable";
 
   const handleAddToCart = (product) => {
     dispatch(addToCart(product));
@@ -51,29 +56,48 @@ const BookCard = ({ book }) => {
             </h3>
           </Link>
           <p className="mb-2 text-sm font-medium uppercase tracking-[0.15em] text-slate-500">
-            {book?.category} • seller {book?.sellerUsername}
+            {book?.category} | seller {book?.sellerUsername}
           </p>
           <p className="mb-3 flex-1 text-slate-600">
             {book?.description.length > 110
               ? `${book.description.slice(0, 110)}...`
               : book?.description}
           </p>
-          <p className="mb-5 text-sm text-slate-500">
-            Includes purchased file:{" "}
+          <p className="mb-2 text-sm text-slate-500">
+            Copies available:{" "}
             <span className="font-semibold text-slate-700">
-              {book?.documentName ? `${book.documentName} (${getDocumentLabel(book.documentMimeType)})` : "Pending"}
+              {book?.availableCopies ?? book?.stock ?? 0}
+            </span>
+          </p>
+          <p className="mb-5 text-sm text-slate-500">
+            Included file:{" "}
+            <span className="font-semibold text-slate-700">
+              {book?.documentName
+                ? `${book.documentName} (${getDocumentLabel(book.documentMimeType)})`
+                : "Pending"}
             </span>
           </p>
           <p className="mb-5 font-medium text-slate-900">
-            ${book?.newPrice}
-            <span className="ml-2 text-slate-400 line-through">${book?.oldPrice}</span>
+            {book?.isFree ? "Free" : `INR ${book?.newPrice}`}
+            {!book?.isFree ? (
+              <span className="ml-2 text-slate-400 line-through">INR {book?.oldPrice}</span>
+            ) : null}
           </p>
           <button
-            onClick={() => handleAddToCart(book)}
-            className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+            onClick={() => handleBookAccess({ book, onRent: () => handleAddToCart(book) })}
+            disabled={isOwned || isUnavailable}
+            className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <FiShoppingCart />
-            <span>Add to Cart</span>
+            <span>
+              {isOwned
+                ? "Your Listing"
+                : isUnavailable
+                  ? "Unavailable"
+                  : book?.isFree
+                    ? "Read Free"
+                    : "Add to Rental Cart"}
+            </span>
           </button>
         </div>
       </div>

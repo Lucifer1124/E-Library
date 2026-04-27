@@ -1,6 +1,12 @@
 const express = require("express");
 const User = require("./user.model");
-const { createSessionToken, sanitizeUser } = require("./user.service");
+const {
+  createSessionToken,
+  getSessionCookieClearOptions,
+  getSessionCookieOptions,
+  sanitizeUser,
+  SESSION_COOKIE_NAME,
+} = require("./user.service");
 const verifyToken = require("../middleware/verifyToken");
 
 const router = express.Router();
@@ -38,9 +44,10 @@ router.post("/register", async (req, res) => {
 
     const token = createSessionToken(user);
 
+    res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+
     return res.status(201).json({
       message: "Account created successfully.",
-      token,
       user: sanitizeUser(user),
     });
   } catch (error) {
@@ -76,9 +83,10 @@ router.post("/login", async (req, res) => {
 
     const token = createSessionToken(user);
 
+    res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+
     return res.status(200).json({
       message: "Authentication successful.",
-      token,
       user: sanitizeUser(user),
     });
   } catch (error) {
@@ -92,6 +100,7 @@ router.get("/me", verifyToken, async (req, res) => {
 });
 
 router.post("/logout", verifyToken, async (req, res) => {
+  res.clearCookie(SESSION_COOKIE_NAME, getSessionCookieClearOptions());
   return res.status(200).json({ message: "Logged out successfully." });
 });
 

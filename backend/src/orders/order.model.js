@@ -88,8 +88,83 @@ const orderSchema = new mongoose.Schema(
           required: true,
           default: true,
         },
+        isFree: {
+          type: Boolean,
+          default: false,
+        },
+        copyNumber: {
+          type: Number,
+          default: null,
+          min: 1,
+        },
+        issueDate: {
+          type: Date,
+          required: true,
+        },
+        dueDate: {
+          type: Date,
+          required: true,
+        },
+        returnedDate: {
+          type: Date,
+          default: null,
+        },
+        renewalDays: {
+          type: Number,
+          required: true,
+          default: 0,
+          min: 0,
+        },
+        renewalFeePerDay: {
+          type: Number,
+          required: true,
+          default: 2,
+          min: 0,
+        },
+        status: {
+          type: String,
+          enum: ["active", "overdue", "returned"],
+          default: "active",
+        },
+        fineAccrued: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+        finePaid: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+        fineWaived: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
       },
     ],
+    rentalDays: {
+      type: Number,
+      required: true,
+      default: 5,
+      min: 5,
+    },
+    renewalFeePerDay: {
+      type: Number,
+      required: true,
+      default: 2,
+      min: 0,
+    },
+    totalOutstandingFine: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    orderType: {
+      type: String,
+      default: "rental",
+      enum: ["rental"],
+    },
     totalPrice: {
       type: Number,
       required: true,

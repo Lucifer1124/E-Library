@@ -7,7 +7,7 @@ const CartPage = () => {
     const cartItems = useSelector(state => state.cart.cartItems);
     const dispatch =  useDispatch()
 
-    const totalPrice =  cartItems.reduce((acc, item) => acc + item.newPrice, 0).toFixed(2);
+    const totalPrice =  cartItems.reduce((acc, item) => acc + (item.isFree ? 0 : item.newPrice), 0).toFixed(2);
 
     const handleRemoveFromCart = (product) => {
         dispatch(removeFromCart(product))
@@ -21,7 +21,7 @@ const CartPage = () => {
             <div className="flex mt-12 h-full flex-col overflow-hidden bg-white shadow-xl">
                 <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
                     <div className="flex items-start justify-between">
-                        <div className="text-lg font-medium text-gray-900">Shopping cart</div>
+                        <div className="text-lg font-medium text-gray-900">Rental cart</div>
                         <div className="ml-3 flex h-7 items-center ">
                             <button
                                 type="button"
@@ -56,7 +56,7 @@ const CartPage = () => {
                                                                 <h3>
                                                                     <Link to='/'>{product?.title}</Link>
                                                                 </h3>
-                                                                <p className="sm:ml-4">${product?.newPrice}</p>
+                                                                <p className="sm:ml-4">{product?.isFree ? "Free" : `INR ${product?.newPrice}`}</p>
                                                             </div>
                                                             <p className="mt-1 text-sm text-gray-500 capitalize"><strong>Category: </strong>{product?.category}</p>
                                                         </div>
@@ -92,13 +92,13 @@ const CartPage = () => {
                         <p>Subtotal</p>
                         <p>${totalPrice ? totalPrice : 0}</p>
                     </div>
-                    <p className="mt-0.5 text-sm text-gray-500">Shipping and taxes calculated at checkout.</p>
+                    <p className="mt-0.5 text-sm text-gray-500">Renewal days and local demo payment are calculated at checkout.</p>
                     <div className="mt-6">
                         <Link
                             to="/checkout"
                             className="flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700"
                         >
-                            Checkout
+                            Continue to Rental Checkout
                         </Link>
                     </div>
                     <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
@@ -109,7 +109,7 @@ const CartPage = () => {
 
                                 className="font-medium text-indigo-600 hover:text-indigo-500 ml-1"
                             >
-                                Continue Shopping
+                                Continue Browsing
                                 <span aria-hidden="true"> &rarr;</span>
                             </button>
                         </Link>

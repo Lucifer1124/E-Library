@@ -4,6 +4,7 @@ import {
   useDeleteBookMutation,
   useFetchAllBooksQuery,
   useFetchSellerBooksQuery,
+  useUpdateTrendingStatusMutation,
 } from "../../../redux/features/books/booksApi";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -12,13 +13,14 @@ const ManageBooks = () => {
   const allBooksQuery = useFetchAllBooksQuery(undefined, { skip: !isAdmin });
   const sellerBooksQuery = useFetchSellerBooksQuery(undefined, { skip: isAdmin });
   const [deleteBook, { isLoading: isDeleting }] = useDeleteBookMutation();
+  const [updateTrendingStatus, { isLoading: isUpdatingTrending }] = useUpdateTrendingStatusMutation();
 
   const books = isAdmin ? allBooksQuery.data || [] : sellerBooksQuery.data || [];
   const isLoading = isAdmin ? allBooksQuery.isLoading : sellerBooksQuery.isLoading;
 
   const handleDeleteBook = async (id) => {
     const result = await Swal.fire({
-      title: "Delete this book?",
+      title: "Delete this library book?",
       text: "This action cannot be undone.",
       icon: "warning",
       showCancelButton: true,
@@ -33,7 +35,7 @@ const ManageBooks = () => {
       await deleteBook(id).unwrap();
       Swal.fire({
         title: "Deleted",
-        text: "Book removed successfully.",
+        text: "Library book removed successfully.",
         icon: "success",
       });
     } catch (error) {
@@ -45,8 +47,30 @@ const ManageBooks = () => {
     }
   };
 
+  const handleTrendingToggle = async (book) => {
+    try {
+      await updateTrendingStatus({
+        id: book._id,
+        trending: !book.trending,
+      }).unwrap();
+      Swal.fire({
+        title: "Curated",
+        text: !book.trending
+          ? "That title is now shining in the trending shelf."
+          : "That title has been eased out of the trending shelf.",
+        icon: "success",
+      });
+    } catch (error) {
+      Swal.fire({
+        title: "Curation stalled",
+        text: error?.data?.message || "We couldn't update the trending shelf right now.",
+        icon: "error",
+      });
+    }
+  };
+
   if (isLoading) {
-    return <div className="rounded-[1.75rem] bg-white p-8 shadow-sm">Loading books...</div>;
+    return <div className="rounded-[1.75rem] bg-white p-8 shadow-sm">Loading library books...</div>;
   }
 
   return (
@@ -57,7 +81,7 @@ const ManageBooks = () => {
             Inventory
           </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
-            {isAdmin ? "All books in the catalog" : "Books you uploaded"}
+            {isAdmin ? "All books in the library" : "Books you uploaded"}
           </h2>
         </div>
         <Link
@@ -70,7 +94,7 @@ const ManageBooks = () => {
 
       {books.length === 0 ? (
         <div className="rounded-2xl bg-slate-50 p-8 text-center text-slate-500">
-          No books available yet.
+          No library books available yet.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -80,7 +104,9 @@ const ManageBooks = () => {
                 <th className="px-4">Title</th>
                 <th className="px-4">Seller</th>
                 <th className="px-4">Category</th>
-                <th className="px-4">Price</th>
+                <th className="px-4">Rental</th>
+                <th className="px-4">Stock</th>
+                {isAdmin ? <th className="px-4">Trending</th> : null}
                 <th className="px-4">Actions</th>
               </tr>
             </thead>
@@ -90,7 +116,26 @@ const ManageBooks = () => {
                   <td className="rounded-l-2xl px-4 py-4 font-semibold text-slate-900">{book.title}</td>
                   <td className="px-4 py-4">{book.sellerUsername}</td>
                   <td className="px-4 py-4 capitalize">{book.category}</td>
-                  <td className="px-4 py-4">${book.newPrice}</td>
+                  <td className="px-4 py-4">{book.isFree ? "Free" : `INR ${book.newPrice}`}</td>
+                  <td className="px-4 py-4">
+                    {book.availableCopies ?? 0} on shelf • {book.activeCopies ?? 0} out
+                  </td>
+                  {isAdmin ? (
+                    <td className="px-4 py-4">
+                      <button
+                        type="button"
+                        disabled={isUpdatingTrending}
+                        onClick={() => handleTrendingToggle(book)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold ${
+                          book.trending
+                            ? "bg-amber-100 text-amber-800"
+                            : "border border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {book.trending ? "Trending" : "Not Trending"}
+                      </button>
+                    </td>
+                  ) : null}
                   <td className="rounded-r-2xl px-4 py-4">
                     <div className="flex flex-wrap gap-3">
                       <Link

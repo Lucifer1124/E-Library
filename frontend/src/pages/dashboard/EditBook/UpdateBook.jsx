@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import Loading from "../../../components/Loading";
 import { useFetchBookByIdQuery, useUpdateBookMutation } from "../../../redux/features/books/booksApi";
+import { useAuth } from "../../../context/AuthContext";
 
 const categoryOptions = [
   "action",
@@ -19,6 +20,7 @@ const categoryOptions = [
 ];
 
 const UpdateBook = () => {
+  const { isAdmin } = useAuth();
   const { id } = useParams();
   const { data: bookData, isLoading, isError } = useFetchBookByIdQuery(id);
   const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
@@ -34,6 +36,8 @@ const UpdateBook = () => {
         description: bookData.description,
         category: bookData.category,
         trending: bookData.trending,
+        stock: bookData.stock,
+        isFree: bookData.isFree,
         oldPrice: bookData.oldPrice,
         newPrice: bookData.newPrice,
         coverImage: bookData.coverImage,
@@ -46,8 +50,10 @@ const UpdateBook = () => {
       await updateBook({
         id,
         ...data,
+        stock: Number(data.stock),
+        isFree: Boolean(data.isFree),
         oldPrice: Number(data.oldPrice),
-        newPrice: Number(data.newPrice),
+        newPrice: data.isFree ? 0 : Number(data.newPrice),
         document: data.document?.[0],
       }).unwrap();
 
@@ -70,7 +76,7 @@ const UpdateBook = () => {
 
   return (
     <div className="max-w-3xl rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-2xl font-bold text-slate-900">Edit book</h2>
+      <h2 className="text-2xl font-bold text-slate-900">Edit library book</h2>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 grid gap-5 md:grid-cols-2">
         <div>
@@ -134,7 +140,7 @@ const UpdateBook = () => {
             className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:font-semibold file:text-white focus:border-sky-500"
           />
           <p className="mt-2 text-xs text-slate-500">
-            Leave this empty to keep the current purchased file. Supported: PDF, TXT, DOC, DOCX up to 10MB.
+            Leave this empty to keep the current readable file. Supported: PDF, TXT, DOC, DOCX up to 10MB.
           </p>
           <p className="mt-2 text-sm text-slate-700">
             Current file: <span className="font-semibold">{bookData.documentName || "No file uploaded yet"}</span>
@@ -147,7 +153,17 @@ const UpdateBook = () => {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Old Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Copies In Stock</label>
+          <input
+            type="number"
+            min="1"
+            {...register("stock", { required: true, min: 1 })}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-500"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Old Rental Fee</label>
           <input
             type="number"
             step="0.01"
@@ -157,19 +173,31 @@ const UpdateBook = () => {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">New Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            5-Day Rental Fee
+          </label>
           <input
             type="number"
             step="0.01"
             {...register("newPrice", { required: true })}
             className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-sky-500"
+            disabled={watch("isFree")}
           />
         </div>
 
         <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
-          <input type="checkbox" {...register("trending")} />
-          <span className="text-sm font-semibold text-slate-700">Keep this book in trending</span>
+          <input type="checkbox" {...register("isFree")} />
+          <span className="text-sm font-semibold text-slate-700">
+            Offer this title for free library access
+          </span>
         </label>
+
+        {isAdmin ? (
+          <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
+            <input type="checkbox" {...register("trending")} />
+            <span className="text-sm font-semibold text-slate-700">Keep this book in trending</span>
+          </label>
+        ) : null}
 
         <button
           type="submit"

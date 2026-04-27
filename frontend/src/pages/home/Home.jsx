@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useFetchAllBooksQuery } from "../../redux/features/books/booksApi";
 import { useAuth } from "../../context/AuthContext";
 import BookCard from "../books/BookCard";
+import { hydrateBookStatuses } from "../../redux/features/books/bookSlice";
 
-const accent = "#8672FF";
+const accent = "#312e81";
 const allCategories = [
   "all",
   "action",
@@ -22,6 +24,7 @@ const allCategories = [
 const Home = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const dispatch = useDispatch();
   const { currentUser } = useAuth();
   const { data: books = [], isLoading, isError } = useFetchAllBooksQuery({
     search: search.trim() || undefined,
@@ -30,13 +33,21 @@ const Home = () => {
 
   const visibleBooks = useMemo(() => books.slice(0, 12), [books]);
 
+  useEffect(() => {
+    dispatch(
+      hydrateBookStatuses({
+        books,
+        currentUserId: currentUser?.id,
+      })
+    );
+  }, [books, currentUser?.id, dispatch]);
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl p-8 text-white shadow-sm" style={{ backgroundColor: accent }}>
         <h1 className="text-4xl font-bold md:text-5xl">Bookie Pookie</h1>
         <p className="mt-3 max-w-3xl text-base text-indigo-50 md:text-lg">
-          Discover, buy, and sell amazing books with local username/password auth, a seller-ready
-          dashboard, and backend-driven checkout powered by your own MERN stack.
+          A quieter library for reading, lending, and keeping track of every copy in one place.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -122,7 +133,7 @@ const Home = () => {
           </div>
         ) : visibleBooks.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-            No books found. Try another search or add a new book.
+            No books found. Try another search or add a new title.
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -135,23 +146,21 @@ const Home = () => {
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Backend-driven auth</h2>
+          <h2 className="text-lg font-bold text-slate-900">Backend-led access</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Username/password login, admin role checks, and 5-day JWT sessions are handled by the
-            backend API.
+            Username login, role checks, and the five-day session all stay on the server.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Customer first, seller optional</h2>
+          <h2 className="text-lg font-bold text-slate-900">Reader first, seller when needed</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Every account starts as a customer, and the same account can upload books whenever the
-            user wants to sell.
+            Each account can read, rent, and also list books without juggling separate profiles.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Local demo checkout</h2>
+          <h2 className="text-lg font-bold text-slate-900">Rental flow with renewal</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Buyers can use demo card checkout or cash on delivery until Razorpay is added later.
+            Every rental starts with five days and can be extended at INR 2 per day.
           </p>
         </div>
       </section>

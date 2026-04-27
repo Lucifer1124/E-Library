@@ -1,10 +1,12 @@
 const jwt = require("jsonwebtoken");
 const User = require("../users/user.model");
+const { SESSION_COOKIE_NAME } = require("../users/user.service");
 
 const verifyToken = async (req, res, next) => {
   try {
     const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.split(" ")[1] : null;
+    const cookieToken = req.cookies?.[SESSION_COOKIE_NAME];
+    const token = cookieToken || (header.startsWith("Bearer ") ? header.split(" ")[1] : null);
 
     if (!token) {
       return res.status(401).json({ message: "Access denied. No token provided." });
