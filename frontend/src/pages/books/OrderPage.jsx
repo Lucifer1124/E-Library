@@ -67,7 +67,7 @@ const OrderPage = () => {
     try {
       await renewRentalItem({ orderId, itemId, extraDays }).unwrap();
     } catch (error) {
-      window.alert(error?.data?.message || "Unable to renew this rental.");
+      window.alert(error?.response?.data?.message || "Unable to renew this rental.");
     }
   };
 
@@ -75,7 +75,7 @@ const OrderPage = () => {
     try {
       await returnRentalItem({ orderId, itemId }).unwrap();
     } catch (error) {
-      window.alert(error?.data?.message || "Unable to return this rental.");
+      window.alert(error?.response?.data?.message || "Unable to return this rental.");
     }
   };
 

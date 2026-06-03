@@ -80,7 +80,7 @@ const CheckoutPage = () => {
     } catch (error) {
       Swal.fire({
         title: "Rental not completed",
-        text: error?.data?.message || "We couldn't process this rental - missing item details.",
+        text: error?.response?.data?.message || "We couldn't process this rental - missing item details.",
         icon: "error",
       });
     }

@@ -181,11 +181,12 @@ const postABook = async (req, res) => {
 const getAllBooks = async (req, res) => {
   try {
     const query = {};
-    const search = req.query.search?.trim();
+    const search = req.query.search?.trim().slice(0, 100);
     const category = req.query.category?.trim().toLowerCase();
 
     if (search) {
-      const searchRegex = new RegExp(search, "i");
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escapedSearch, "i");
       query.$or = [
         { title: searchRegex },
         { author: searchRegex },
