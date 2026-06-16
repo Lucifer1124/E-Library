@@ -31,6 +31,8 @@ const OrderPage = () => {
 
   const handleOpenDocument = async (bookId, fileName, mimeType) => {
     const requestKey = `${bookId}:${fileName}`;
+    const shouldOpenInline = inlineMimeTypes.has(mimeType);
+    const previewWindow = shouldOpenInline ? window.open("", "_blank", "noopener,noreferrer") : null;
 
     try {
       setActiveDocumentKey(requestKey);
@@ -44,11 +46,16 @@ const OrderPage = () => {
       const objectUrl = window.URL.createObjectURL(blob);
 
       if (inlineMimeTypes.has(blob.type)) {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
+        if (previewWindow) {
+          previewWindow.location.href = objectUrl;
+        } else {
+          window.open(objectUrl, "_blank", "noopener,noreferrer");
+        }
         window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
         return;
       }
 
+      previewWindow?.close();
       const link = document.createElement("a");
       link.href = objectUrl;
       link.download = fileName || "library-document";
@@ -57,6 +64,7 @@ const OrderPage = () => {
       link.remove();
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
+      previewWindow?.close();
       window.alert(error?.response?.data?.message || "Unable to open this library file right now.");
     } finally {
       setActiveDocumentKey("");

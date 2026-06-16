@@ -5,19 +5,29 @@ import apiClient from "../utils/apiClient";
 import booksApi from "../redux/features/books/booksApi";
 import { fetchAdminOverview, fetchAdminUsers } from "../redux/features/admin/adminSlice";
 
-const openBlobDocument = (blob, fileName) => {
-  const objectUrl = window.URL.createObjectURL(blob);
-  window.open(objectUrl, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
+const inlineMimeTypes = new Set(["application/pdf", "text/plain"]);
 
-  if (!blob.type.includes("pdf") && !blob.type.includes("text")) {
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = fileName || "library-file";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+const openBlobDocument = (blob, fileName, previewWindow) => {
+  const objectUrl = window.URL.createObjectURL(blob);
+
+  if (inlineMimeTypes.has(blob.type)) {
+    if (previewWindow) {
+      previewWindow.location.href = objectUrl;
+    } else {
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+    }
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
+    return;
   }
+
+  previewWindow?.close();
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName || "library-file";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
 };
 
 export const useBookAccess = () => {
@@ -37,6 +47,9 @@ export const useBookAccess = () => {
     }
 
     if (book.isFree) {
+      const shouldOpenInline = inlineMimeTypes.has(book.documentMimeType);
+      const previewWindow = shouldOpenInline ? window.open("", "_blank", "noopener,noreferrer") : null;
+
       try {
         await apiClient.post(`/api/orders/instant/${book._id}`);
         dispatch(booksApi.util.invalidateTags(["Books"]));
@@ -49,7 +62,8 @@ export const useBookAccess = () => {
         });
         openBlobDocument(
           new Blob([response.data], { type: response.headers["content-type"] }),
-          book.documentName
+          book.documentName,
+          previewWindow
         );
       } catch (error) {
         if (error?.response?.status === 409) {
@@ -58,10 +72,12 @@ export const useBookAccess = () => {
           });
           openBlobDocument(
             new Blob([response.data], { type: response.headers["content-type"] }),
-            book.documentName
+            book.documentName,
+            previewWindow
           );
           return;
         }
+        previewWindow?.close();
         window.alert(
           error?.response?.data?.message || "We couldn't open that title right now."
         );
