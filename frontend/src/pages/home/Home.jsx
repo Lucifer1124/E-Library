@@ -129,11 +129,11 @@ const Home = () => {
           </div>
         ) : isError ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-10 text-center text-rose-700 shadow-sm">
-            Unable to load books from the backend right now.
+            Uh, oh... Unable to load books 
           </div>
         ) : visibleBooks.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-            No books found. Try another search or add a new title.
+            No books found... Try searching another or add a new title.
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -146,21 +146,21 @@ const Home = () => {
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Backend-led access</h2>
+          <h2 className="text-lg font-bold text-slate-900">Rent Books</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Username login, role checks, and the five-day session all stay on the server.
+            Login once and keep your book hunt on from A-Z genre find it all right here
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Reader first, seller when needed</h2>
+          <h2 className="text-lg font-bold text-slate-900">Be a Seller</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Each account can read, rent, and also list books without juggling separate profiles.
+            You can now list lending and also list books without juggling separate profiles right here
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Rental flow with renewal</h2>
+          <h2 className="text-lg font-bold text-slate-900">Lowest rental prices across platforms</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Every rental starts with five days and can be extended at INR 2 per day.
+            Find your favorite books for free or at the lowest rental prices, all here 
           </p>
         </div>
       </section>

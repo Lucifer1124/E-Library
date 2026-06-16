@@ -668,12 +668,30 @@ const returnRentalItem = async (req, res) => {
       })
     );
 
+    // Get the returned item for acknowledgement details
+    syncRentalOrder(order);
+    const returnedItem = order.items.id(req.params.itemId);
+
     return res.status(200).json({
       message: "We marked that book as returned.",
+      acknowledgement: {
+        bookTitle: returnedItem.title,
+        copyNumber: returnedItem.copyNumber,
+        issueDate: returnedItem.issueDate,
+        dueDate: returnedItem.dueDate,
+        returnedDate: returnedItem.returnedDate,
+        fineAccrued: returnedItem.fineAccrued || 0,
+        outstandingFine: Math.max(
+          (returnedItem.fineAccrued || 0) - (returnedItem.finePaid || 0) - (returnedItem.fineWaived || 0),
+          0
+        ),
+        message: "Book return confirmed",
+      },
       order: makePublicOrder(order),
       userStanding: {
         pendingFines: user.pendingFines,
         accountStatus: user.accountStatus,
+        payLaterBill: user.payLaterBill || 0,
       },
     });
   } catch (error) {

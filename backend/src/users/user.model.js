@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    payLaterBill: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     rentedBooks: [
       {
         type: mongoose.Schema.Types.ObjectId,

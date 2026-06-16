@@ -6,16 +6,28 @@ import {
   useReturnRentalItemMutation,
 } from "../../redux/features/orders/ordersApi";
 import CommonNoteBoard from "../../components/CommonNoteBoard";
+import RenewalPaymentModal from "../../components/RenewalPaymentModal";
+import ReturnAcknowledgement from "../../components/ReturnAcknowledgement";
+import FinePaymentCard from "../../components/FinePaymentCard";
+import PayLaterBill from "../../components/PayLaterBill";
+import { useAuth } from "../../context/AuthContext";
 
 const inlineMimeTypes = new Set(["application/pdf", "text/plain"]);
 
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : "Not returned");
 
 const OrderPage = () => {
-  const { data: orders = [], isLoading, isError } = useGetMyOrdersQuery();
+  const { currentUser } = useAuth();
+  const { data: orders = [], isLoading, isError, refetch } = useGetMyOrdersQuery();
   const [activeDocumentKey, setActiveDocumentKey] = useState("");
   const [renewRentalItem, { isLoading: isRenewing }] = useRenewRentalItemMutation();
   const [returnRentalItem, { isLoading: isReturning }] = useReturnRentalItemMutation();
+
+  // Modal state
+  const [renewalModalOpen, setRenewalModalOpen] = useState(false);
+  const [renewalData, setRenewalData] = useState(null);
+  const [returnAckowledgement, setReturnAcknowledgement] = useState(null);
+  const [showReturnAck, setShowReturnAck] = useState(false);
 
   const handleOpenDocument = async (bookId, fileName, mimeType) => {
     const requestKey = `${bookId}:${fileName}`;
@@ -51,7 +63,7 @@ const OrderPage = () => {
     }
   };
 
-  const handleRenew = async (orderId, itemId) => {
+  const handleRenew = async (orderId, itemId, bookTitle) => {
     const input = window.prompt("Add how many extra days? Each day costs INR 2.", "1");
     const extraDays = Number(input);
 
@@ -64,19 +76,30 @@ const OrderPage = () => {
       return;
     }
 
-    try {
-      await renewRentalItem({ orderId, itemId, extraDays }).unwrap();
-    } catch (error) {
-      window.alert(error?.response?.data?.message || "Unable to renew this rental.");
-    }
+    // Open payment choice modal
+    setRenewalData({ orderId, itemId, bookTitle, extraDays });
+    setRenewalModalOpen(true);
   };
 
   const handleReturn = async (orderId, itemId) => {
     try {
-      await returnRentalItem({ orderId, itemId }).unwrap();
+      const response = await returnRentalItem({ orderId, itemId }).unwrap();
+      
+      // Show acknowledgement
+      if (response.acknowledgement) {
+        setReturnAcknowledgement(response.acknowledgement);
+        setShowReturnAck(true);
+      }
+      
+      // Refetch orders
+      refetch();
     } catch (error) {
       window.alert(error?.response?.data?.message || "Unable to return this rental.");
     }
+  };
+
+  const handleRenewalSuccess = () => {
+    refetch();
   };
 
   if (isLoading) {
@@ -96,6 +119,16 @@ const OrderPage = () => {
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">Library</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900">Your rentals and reading access</h1>
+      </div>
+
+      {/* Payment Cards */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {currentUser?.pendingFines > 0 && (
+          <FinePaymentCard pendingFines={currentUser.pendingFines} onPaymentSuccess={() => refetch()} />
+        )}
+        {currentUser?.payLaterBill > 0 && (
+          <PayLaterBill payLaterBill={currentUser.payLaterBill} onPaymentSuccess={() => refetch()} />
+        )}
       </div>
 
       {orders.length === 0 ? (
@@ -186,7 +219,7 @@ const OrderPage = () => {
                         <button
                           type="button"
                           disabled={item.status === "returned" || isBusy}
-                          onClick={() => handleRenew(order._id, item._id)}
+                          onClick={() => handleRenew(order._id, item._id, item.title)}
                           className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Renew
@@ -210,6 +243,28 @@ const OrderPage = () => {
       )}
 
       <CommonNoteBoard />
+
+      {/* Modals */}
+      {renewalData && (
+        <RenewalPaymentModal
+          orderId={renewalData.orderId}
+          itemId={renewalData.itemId}
+          bookTitle={renewalData.bookTitle}
+          extraDays={renewalData.extraDays}
+          isOpen={renewalModalOpen}
+          onClose={() => {
+            setRenewalModalOpen(false);
+            setRenewalData(null);
+          }}
+          onSuccess={handleRenewalSuccess}
+        />
+      )}
+
+      <ReturnAcknowledgement
+        acknowledgement={returnAckowledgement}
+        isOpen={showReturnAck}
+        onClose={() => setShowReturnAck(false)}
+      />
     </div>
   );
 };

@@ -141,6 +141,11 @@ const orderSchema = new mongoose.Schema(
           default: 0,
           min: 0,
         },
+        renewalPaymentMethod: {
+          type: String,
+          enum: ["immediate", "pay-later"],
+          default: null,
+        },
       },
     ],
     rentalDays: {
