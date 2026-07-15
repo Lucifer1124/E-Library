@@ -22,6 +22,10 @@ const getDocumentLabel = (mimeType) => {
     return "DOCX";
   }
 
+  if (mimeType.includes("spreadsheetml")) {
+    return "WPS";
+  }
+
   return "FILE";
 };
 
